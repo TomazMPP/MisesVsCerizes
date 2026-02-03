@@ -78,6 +78,38 @@ export async function fetchBitcoinData(): Promise<PricePoint[]> {
     return prices;
   } catch (err) {
     console.error('Binance API failed', err);
+    return fetchBitcoinFromCoinGecko();
+  }
+}
+
+// Fallback: Fetch Bitcoin from CoinGecko
+async function fetchBitcoinFromCoinGecko(): Promise<PricePoint[]> {
+  const startDate = new Date(START_DATE);
+  const endDate = new Date();
+
+  const from = Math.floor(startDate.getTime() / 1000);
+  const to = Math.floor(endDate.getTime() / 1000);
+
+  const url = `${API_ENDPOINTS.coingecko}/coins/bitcoin/market_chart/range?vs_currency=brl&from=${from}&to=${to}`;
+
+  try {
+    const response = await fetchWithRetry(url, {}, 3);
+
+    if (!response.ok) {
+      throw new Error(`CoinGecko API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // CoinGecko format: { prices: [[timestamp_ms, price], ...] }
+    const prices: PricePoint[] = data.prices.map((item: number[]) => ({
+      date: formatDateISO(new Date(item[0])),
+      value: item[1],
+    }));
+
+    return prices;
+  } catch (err) {
+    console.error('CoinGecko API failed', err);
     return fetchBitcoinFromYahoo();
   }
 }
