@@ -1,6 +1,6 @@
 import { PricePoint } from '@/types';
 import { START_DATE, API_ENDPOINTS, BCB_SERIES } from './constants';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 
 // Helper to format date for BCB API (dd/MM/yyyy)
 function formatDateBCB(date: Date): string {
@@ -10,6 +10,41 @@ function formatDateBCB(date: Date): string {
 // Helper to format date for display (yyyy-MM-dd)
 function formatDateISO(date: Date): string {
   return format(date, 'yyyy-MM-dd');
+}
+
+// Common fetch with retry and headers
+async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 3): Promise<Response> {
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/json',
+    'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    ...options.headers,
+  };
+
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        next: { revalidate: 86400 }, // Default cache
+      });
+
+      if (response.ok) return response;
+      
+      // If we get a 403 or 429, wait longer
+      if (response.status === 403 || response.status === 429) {
+        await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+      }
+      
+      // BCB often returns 500s or timeouts, simple retry helps
+      if (i === retries - 1) return response; // Return last error response
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+  
+  throw new Error('Failed after retries');
 }
 
 // Fetch Bitcoin historical data from Binance API
@@ -24,27 +59,27 @@ export async function fetchBitcoinData(): Promise<PricePoint[]> {
   // Using BTCBRL pair for Brazilian Real prices
   const url = `${API_ENDPOINTS.binance}/klines?symbol=BTCBRL&interval=1d&startTime=${startTime}&endTime=${endTime}&limit=1000`;
 
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/json',
-    },
-    next: { revalidate: 86400 } // Cache for 24 hours
-  });
+  try {
+    const response = await fetchWithRetry(url);
 
-  if (!response.ok) {
-    console.warn(`Binance API error: ${response.status}, trying fallback...`);
+    if (!response.ok) {
+      console.warn(`Binance API error: ${response.status}, trying fallback...`);
+      return fetchBitcoinFromYahoo();
+    }
+
+    const data = await response.json();
+
+    // Binance klines format: [openTime, open, high, low, close, volume, closeTime, ...]
+    const prices: PricePoint[] = data.map((kline: (string | number)[]) => ({
+      date: formatDateISO(new Date(kline[0] as number)),
+      value: parseFloat(kline[4] as string), // Close price
+    }));
+
+    return prices;
+  } catch (err) {
+    console.error('Binance API failed', err);
     return fetchBitcoinFromYahoo();
   }
-
-  const data = await response.json();
-
-  // Binance klines format: [openTime, open, high, low, close, volume, closeTime, ...]
-  const prices: PricePoint[] = data.map((kline: (string | number)[]) => ({
-    date: formatDateISO(new Date(kline[0] as number)),
-    value: parseFloat(kline[4] as string), // Close price
-  }));
-
-  return prices;
 }
 
 // Fallback: Fetch Bitcoin from Yahoo Finance (BTC-BRL)
@@ -57,13 +92,7 @@ async function fetchBitcoinFromYahoo(): Promise<PricePoint[]> {
 
   const url = `${API_ENDPOINTS.yahoo}/BTC-BRL?period1=${period1}&period2=${period2}&interval=1d`;
 
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/json',
-      'User-Agent': 'MisesVsCerize/1.0',
-    },
-    next: { revalidate: 86400 }
-  });
+  const response = await fetchWithRetry(url);
 
   if (!response.ok) {
     throw new Error(`Yahoo Finance BTC API error: ${response.status}`);
@@ -92,12 +121,7 @@ export async function fetchIbovespaData(): Promise<PricePoint[]> {
 
   const url = `${API_ENDPOINTS.yahoo}/%5EBVSP?period1=${period1}&period2=${period2}&interval=1d`;
 
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/json',
-    },
-    next: { revalidate: 86400 }
-  });
+  const response = await fetchWithRetry(url);
 
   if (!response.ok) {
     throw new Error(`Yahoo Finance API error: ${response.status}`);
@@ -123,9 +147,7 @@ export async function fetchCDIData(): Promise<PricePoint[]> {
 
   const url = `${API_ENDPOINTS.bcb}.${BCB_SERIES.cdi}/dados?formato=json&dataInicial=${formatDateBCB(startDate)}&dataFinal=${formatDateBCB(endDate)}`;
 
-  const response = await fetch(url, {
-    next: { revalidate: 86400 }
-  });
+  const response = await fetchWithRetry(url);
 
   if (!response.ok) {
     throw new Error(`BCB API error: ${response.status}`);
@@ -152,9 +174,7 @@ export async function fetchIPCAData(): Promise<PricePoint[]> {
 
   const url = `${API_ENDPOINTS.bcb}.${BCB_SERIES.ipca}/dados?formato=json&dataInicial=${formatDateBCB(startDate)}&dataFinal=${formatDateBCB(endDate)}`;
 
-  const response = await fetch(url, {
-    next: { revalidate: 86400 }
-  });
+  const response = await fetchWithRetry(url);
 
   if (!response.ok) {
     throw new Error(`BCB IPCA API error: ${response.status}`);
@@ -180,9 +200,7 @@ export async function fetchDolarData(): Promise<PricePoint[]> {
 
   const url = `${API_ENDPOINTS.bcb}.${BCB_SERIES.dolar}/dados?formato=json&dataInicial=${formatDateBCB(startDate)}&dataFinal=${formatDateBCB(endDate)}`;
 
-  const response = await fetch(url, {
-    next: { revalidate: 86400 }
-  });
+  const response = await fetchWithRetry(url);
 
   if (!response.ok) {
     throw new Error(`BCB Dolar API error: ${response.status}`);
