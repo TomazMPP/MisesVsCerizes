@@ -154,19 +154,25 @@ async function fetchBitcoinFromYahoo(): Promise<PricePoint[]> {
   });
 
   const prices: PricePoint[] = [];
+  let lastBrlRate = 5.50; // Better initial guess
 
-  cBtc.timestamp.forEach((ts: number, i: number) => {
-    const date = formatDateISO(new Date(ts * 1000));
+  // Sort timestamps just in case
+  const sortedIndices = cBtc.timestamp.map((t: number, i: number) => ({ t, i }))
+    .sort((a: any, b: any) => a.t - b.t);
+
+  sortedIndices.forEach(({ t, i }: { t: number, i: number }) => {
+    const date = formatDateISO(new Date(t * 1000));
     const btcUsd = cBtc.indicators.quote[0].close[i];
     
-    // Use BRL rate from same day, or fallback or previous
-    // This is an approximation. Yahoo might not have perfectly aligned timestamps.
-    const brlRate = mapBrl.get(date) || 5.0; // Fallback rate if missing?
+    // Update last known rate if available for this date
+    if (mapBrl.has(date)) {
+      lastBrlRate = mapBrl.get(date)!;
+    }
     
-    if (btcUsd && brlRate) {
+    if (btcUsd) {
       prices.push({
         date: date,
-        value: btcUsd * brlRate
+        value: btcUsd * lastBrlRate
       });
     }
   });
