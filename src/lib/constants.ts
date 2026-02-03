@@ -35,7 +35,7 @@ export const COLORS = {
 export const API_ENDPOINTS = {
   binance: 'https://api.binance.com/api/v3',
   coingecko: 'https://api.coingecko.com/api/v3',
-  yahoo: 'https://query1.finance.yahoo.com/v8/finance/chart',
+  yahoo: 'https://query2.finance.yahoo.com/v8/finance/chart',
   bcb: 'https://api.bcb.gov.br/dados/serie/bcdata.sgs',
 } as const;
 

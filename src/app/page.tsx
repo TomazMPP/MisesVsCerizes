@@ -15,10 +15,12 @@ export default function Home() {
     async function fetchData() {
       try {
         const response = await fetch('/api/data');
-        if (!response.ok) {
-          throw new Error('Failed to fetch data');
-        }
         const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.details || result.error || 'Failed to fetch data');
+        }
+        
         setData(result);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
@@ -38,7 +40,7 @@ export default function Home() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="text-red-500 text-xl mb-4">Erro ao carregar dados</div>
-        <p className="text-muted">{error}</p>
+        <p className="text-muted text-center max-w-lg mx-auto mb-4">{error}</p>
         <button
           onClick={() => window.location.reload()}
           className="mt-4 px-4 py-2 border border-gray-700 rounded hover:bg-gray-900 transition-colors"
