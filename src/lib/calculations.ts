@@ -29,11 +29,10 @@ export function calculateCDIAccumulated(
   const result: PricePoint[] = [];
 
   for (const point of cdiData) {
-    // CDI is given as annual rate, convert to daily
-    // Daily rate = (1 + annual/100)^(1/252) - 1
-    const annualRate = point.value;
-    const dailyRate = Math.pow(1 + annualRate / 100, 1 / 252) - 1;
-    accumulated = accumulated * (1 + dailyRate);
+    // CDI Series 12 is already the daily rate in %
+    // Example: 0.043739 means 0.043739% per day
+    const dailyRatePercent = point.value;
+    accumulated = accumulated * (1 + dailyRatePercent / 100);
 
     result.push({
       date: point.date,
