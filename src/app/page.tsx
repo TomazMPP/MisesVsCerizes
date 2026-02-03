@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Scoreboard, MainChart, BenchmarkChart, StatCard, Loading } from '@/components';
+import { Scoreboard, MainChart, BenchmarkChart, StatCard, Loading, RentabilidadeTable, ConsistenciaTable } from '@/components';
 import { ApiResponse } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -81,16 +81,30 @@ export default function Home() {
           <BenchmarkChart data={data.chartData} />
         </section>
 
-        {/* Stats */}
+ {/* Stats */}
         <section className="mb-16 max-w-md mx-auto">
           <StatCard data={data.chartData} />
         </section>
+        
+        {/* Analytics Tables */}
+        {data.tableData && (
+          <div className="grid grid-cols-1 gap-8 mb-16">
+            <section>
+              <RentabilidadeTable data={data.tableData} />
+            </section>
+            <section>
+              <ConsistenciaTable data={data.tableData} />
+            </section>
+          </div>
+        )}
+
+       
 
         {/* Footer */}
         <footer className="text-center text-muted text-xs">
           <p>Ultima atualizacao: {formattedUpdate}</p>
           <p className="mt-2">
-            Dados: CoinGecko, Yahoo Finance, Banco Central do Brasil
+            Dados: Binance, Yahoo Finance, Banco Central do Brasil
           </p>
           <p className="mt-4 text-gray-700">
             Aposta iniciada em 24/06/2024 | R$ 100.000 cada

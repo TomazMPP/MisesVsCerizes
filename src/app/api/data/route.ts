@@ -13,9 +13,10 @@ import {
   calculateDolarPlus4Accumulated,
   mergeDataForChart,
   calculateReturnPercent,
+  calculateAssetStatistics,
 } from '@/lib/calculations';
 import { INITIAL_INVESTMENT, COLORS } from '@/lib/constants';
-import { ApiResponse } from '@/types';
+import { ApiResponse, AssetTableData } from '@/types';
 
 export const revalidate = 86400; // Revalidate every 24 hours
 
@@ -60,6 +61,21 @@ export async function GET() {
     const bitcoinCurrent = bitcoinValues[bitcoinValues.length - 1]?.value || INITIAL_INVESTMENT;
     const ibovespaCurrent = ibovespaValues[ibovespaValues.length - 1]?.value || INITIAL_INVESTMENT;
 
+    // Calculate statistics for tables
+    const bitcoinStats = calculateAssetStatistics(bitcoinValues);
+    const ibovespaStats = calculateAssetStatistics(ibovespaValues);
+    const cdiStats = calculateAssetStatistics(cdiValues);
+    const ipcaPlus5Stats = calculateAssetStatistics(ipcaPlus5Values);
+    const dolarPlus4Stats = calculateAssetStatistics(dolarPlus4Values);
+
+    const tableData: AssetTableData[] = [
+      { name: 'Bitcoin', color: COLORS.bitcoin, ...bitcoinStats },
+      { name: 'Ibovespa', color: COLORS.ibovespa, ...ibovespaStats },
+      { name: 'CDI', color: COLORS.cdi, ...cdiStats },
+      { name: 'IPCA + 5%', color: COLORS.ipcaPlus5, ...ipcaPlus5Stats },
+      { name: 'Dólar + 4%', color: COLORS.dolarPlus4, ...dolarPlus4Stats },
+    ];
+
     const response: ApiResponse = {
       bitcoin: {
         name: 'Bitcoin',
@@ -83,6 +99,7 @@ export async function GET() {
         dolarPlus4: dolarPlus4Values,
       },
       chartData,
+      tableData,
       lastUpdate: new Date().toISOString(),
     };
 

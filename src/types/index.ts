@@ -27,10 +27,35 @@ export interface ChartDataPoint {
   dolarPlus4?: number;
 }
 
+export interface PeriodReturns {
+  currentMonth: number;
+  yearToDate: number;
+  last3Months: number;
+  last6Months: number;
+  last12Months: number;
+  last24Months: number;
+  sinceInception: number;
+}
+
+export interface ConsistencyStats {
+  positiveMonths: number;
+  negativeMonths: number;
+  bestMonth: number;
+  worstMonth: number;
+}
+
+export interface AssetTableData {
+  name: string;
+  color: string;
+  returns: PeriodReturns;
+  consistency: ConsistencyStats;
+}
+
 export interface ApiResponse {
   bitcoin: AssetData;
   ibovespa: AssetData;
   benchmarks: BenchmarkData;
   chartData: ChartDataPoint[];
+  tableData: AssetTableData[];
   lastUpdate: string;
 }

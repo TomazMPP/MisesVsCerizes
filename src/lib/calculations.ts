@@ -1,6 +1,157 @@
-import { PricePoint, ChartDataPoint } from '@/types';
+import {
+  differenceInDays,
+  parseISO,
+  subMonths,
+  startOfMonth,
+  startOfYear,
+  endOfMonth,
+  format,
+  isSameMonth,
+  isAfter,
+  isBefore
+} from 'date-fns';
+import { PricePoint, ChartDataPoint, PeriodReturns, ConsistencyStats } from '@/types';
 import { INITIAL_INVESTMENT, START_DATE } from './constants';
-import { differenceInDays, parseISO } from 'date-fns';
+
+export function calculateAssetStatistics(
+  data: PricePoint[]
+): { returns: PeriodReturns; consistency: ConsistencyStats } {
+  if (data.length === 0) {
+    return {
+      returns: {
+        currentMonth: 0,
+        yearToDate: 0,
+        last3Months: 0,
+        last6Months: 0,
+        last12Months: 0,
+        last24Months: 0,
+        sinceInception: 0,
+      },
+      consistency: {
+        positiveMonths: 0,
+        negativeMonths: 0,
+        bestMonth: 0,
+        worstMonth: 0,
+      },
+    };
+  }
+
+  const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date));
+  const latestPoint = sortedData[sortedData.length - 1];
+  const latestDate = parseISO(latestPoint.date);
+  const latestValue = latestPoint.value;
+
+  // Helper to find value at specific date or closest before
+  const findValueAtDate = (targetDate: Date): number | null => {
+    const targetStr = format(targetDate, 'yyyy-MM-dd');
+    let closest: PricePoint | null = null;
+    
+    for (const point of sortedData) {
+      if (point.date > targetStr) break;
+      closest = point;
+    }
+    
+    return closest ? closest.value : null;
+  };
+
+  const calculateReturn = (initial: number, final: number) => {
+    return ((final - initial) / initial) * 100;
+  };
+
+  // Period Returns
+  const startOfCurrentMonth = startOfMonth(latestDate);
+  const startOfCurrentYear = startOfYear(latestDate);
+  
+  // For period returns like "last 3 months", we compare with the value 3 months ago
+  const date3MonthsAgo = subMonths(latestDate, 3);
+  const date6MonthsAgo = subMonths(latestDate, 6);
+  const date12MonthsAgo = subMonths(latestDate, 12);
+  const date24MonthsAgo = subMonths(latestDate, 24);
+
+  // We need the value at the END of the previous month for "current month" return
+  // If we just started the month, this is the first value of current month or last of prev month
+  const valueStartMonth = findValueAtDate(subMonths(startOfCurrentMonth, 0)) || sortedData[0].value;
+  // Actually standard way is: Return of Month M = (Price End M / Price End M-1) - 1
+  // So for current month (M), we need Price End M-1.
+  // The 'findValueAtDate' finds the last price <= date.
+  // So 'subMonths(startOfCurrentMonth, 0)' is start of month. We need 1 day before.
+  const dateEndOfPrevMonth = new Date(startOfCurrentMonth);
+  dateEndOfPrevMonth.setDate(dateEndOfPrevMonth.getDate() - 1);
+  const valueEndOfPrevMonth = findValueAtDate(dateEndOfPrevMonth) || sortedData[0].value;
+  
+  const valueStartYear = findValueAtDate(new Date(startOfCurrentYear.getFullYear(), 0, 0)) || sortedData[0].value; // Dec 31st of prev year
+  const value3MonthsAgo = findValueAtDate(date3MonthsAgo) || sortedData[0].value;
+  const value6MonthsAgo = findValueAtDate(date6MonthsAgo) || sortedData[0].value;
+  const value12MonthsAgo = findValueAtDate(date12MonthsAgo) || sortedData[0].value;
+  const value24MonthsAgo = findValueAtDate(date24MonthsAgo) || sortedData[0].value;
+  const valueInception = sortedData[0].value;
+
+  const returns: PeriodReturns = {
+    currentMonth: calculateReturn(valueEndOfPrevMonth, latestValue),
+    yearToDate: calculateReturn(valueStartYear, latestValue),
+    last3Months: calculateReturn(value3MonthsAgo, latestValue),
+    last6Months: calculateReturn(value6MonthsAgo, latestValue),
+    last12Months: calculateReturn(value12MonthsAgo, latestValue),
+    last24Months: calculateReturn(value24MonthsAgo, latestValue),
+    sinceInception: calculateReturn(valueInception, latestValue),
+  };
+
+  // Consistency (Monthly Returns)
+  const monthlyReturns: number[] = [];
+  
+  // Group by month
+  const monthMap = new Map<string, PricePoint[]>();
+  for (const point of sortedData) {
+    const monthKey = point.date.substring(0, 7); // YYYY-MM
+    if (!monthMap.has(monthKey)) monthMap.set(monthKey, []);
+    monthMap.get(monthKey)!.push(point);
+  }
+
+  // Calculate return for each completed month + current month
+  // We need the closing price of the PREVIOUS month to calculate the return of the CURRENT month.
+  const sortedMonths = Array.from(monthMap.keys()).sort();
+  
+  for (let i = 0; i < sortedMonths.length; i++) {
+    const currentMonthKey = sortedMonths[i];
+    const currentMonthPoints = monthMap.get(currentMonthKey)!;
+    const finalPrice = currentMonthPoints[currentMonthPoints.length - 1].value;
+    
+    let initialPrice: number;
+    
+    if (i === 0) {
+      // First month: use first data point of the month/dataset
+      initialPrice = currentMonthPoints[0].value;
+    } else {
+      // Subsequent months: used last price of previous month
+      const prevMonthKey = sortedMonths[i - 1];
+      const prevMonthPoints = monthMap.get(prevMonthKey)!;
+      initialPrice = prevMonthPoints[prevMonthPoints.length - 1].value;
+    }
+
+    if (initialPrice > 0) {
+      monthlyReturns.push(calculateReturn(initialPrice, finalPrice));
+    }
+  }
+
+  const positiveMonths = monthlyReturns.filter(r => r > 0).length;
+  const negativeMonths = monthlyReturns.filter(r => r < 0).length; // < 0, ignore 0
+  const maxReturn = Math.max(...monthlyReturns);
+  const minReturn = Math.min(...monthlyReturns);
+
+  const consistency: ConsistencyStats = {
+    positiveMonths,
+    negativeMonths: sortedMonths.length - positiveMonths, // Including flat months as 'not positive' or strictly negative? User image shows 'Meses negativos'. Usually 0 is neutral. Let's count strictly negative.
+    // Wait, user image shows sum of pos + neg = total months? 151+1 = 152.
+    // I'll count strictly negative.
+    bestMonth: monthlyReturns.length > 0 ? maxReturn : 0,
+    worstMonth: monthlyReturns.length > 0 ? minReturn : 0,
+  };
+  
+  // Re-adjust negative months to match total count logic if needed, or just strictly < 0.
+  consistency.negativeMonths = monthlyReturns.filter(r => r < 0).length;
+
+  return { returns, consistency };
+}
 
 // Calculate portfolio value based on price change
 export function calculatePortfolioValue(
