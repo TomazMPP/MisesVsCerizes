@@ -54,6 +54,13 @@ export function MainChart({ data }: MainChartProps) {
   // Filter data to show only every Nth point for performance
   const filteredData = data.filter((_, index) => index % 3 === 0 || index === data.length - 1);
 
+  // Determine current winner for dynamic coloring
+  const lastPoint = data[data.length - 1];
+  const bitcoinWins = lastPoint ? lastPoint.bitcoin > lastPoint.ibovespa : true;
+  
+  const bitcoinColor = bitcoinWins ? '#FFFFFF' : '#666666';
+  const ibovespaColor = !bitcoinWins ? '#FFFFFF' : '#666666';
+
   return (
     <div className="w-full">
       <h2 className="text-lg font-semibold mb-4 text-center">
@@ -93,19 +100,19 @@ export function MainChart({ data }: MainChartProps) {
               type="monotone"
               dataKey="bitcoin"
               name="Bitcoin"
-              stroke="#FFFFFF"
+              stroke={bitcoinColor}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, fill: '#FFFFFF' }}
+              activeDot={{ r: 4, fill: bitcoinColor }}
             />
             <Line
               type="monotone"
               dataKey="ibovespa"
               name="Ibovespa"
-              stroke="#666666"
+              stroke={ibovespaColor}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, fill: '#666666' }}
+              activeDot={{ r: 4, fill: ibovespaColor }}
             />
           </LineChart>
         </ResponsiveContainer>
