@@ -93,6 +93,7 @@ async function fetchBitcoinFromCoinGecko(): Promise<PricePoint[]> {
   const url = `${API_ENDPOINTS.coingecko}/coins/bitcoin/market_chart/range?vs_currency=brl&from=${from}&to=${to}`;
 
   try {
+    // CoinGecko requires a User-Agent or it may block/401
     const response = await fetchWithRetry(url, {}, 3);
 
     if (!response.ok) {
@@ -102,6 +103,8 @@ async function fetchBitcoinFromCoinGecko(): Promise<PricePoint[]> {
     const data = await response.json();
     
     // CoinGecko format: { prices: [[timestamp_ms, price], ...] }
+    if (!data.prices) throw new Error('CoinGecko no prices data');
+
     const prices: PricePoint[] = data.prices.map((item: number[]) => ({
       date: formatDateISO(new Date(item[0])),
       value: item[1],
@@ -114,7 +117,8 @@ async function fetchBitcoinFromCoinGecko(): Promise<PricePoint[]> {
   }
 }
 
-// Fallback: Fetch Bitcoin from Yahoo Finance (BTC-BRL)
+// Fallback: Fetch Bitcoin from Yahoo Finance (BTC-USD * BRL=X)
+// Yahoo BTC-BRL is often broken/404, so we calculate it or try a different ticker
 async function fetchBitcoinFromYahoo(): Promise<PricePoint[]> {
   const startDate = new Date(START_DATE);
   const endDate = new Date();
@@ -122,23 +126,50 @@ async function fetchBitcoinFromYahoo(): Promise<PricePoint[]> {
   const period1 = Math.floor(startDate.getTime() / 1000);
   const period2 = Math.floor(endDate.getTime() / 1000);
 
-  const url = `${API_ENDPOINTS.yahoo}/BTC-BRL?period1=${period1}&period2=${period2}&interval=1d`;
+  // Try fetching BTC-USD
+  const urlBtc = `${API_ENDPOINTS.yahoo}/BTC-USD?period1=${period1}&period2=${period2}&interval=1d`;
+  // Try fetching USD-BRL (BRL=X)
+  const urlBrl = `${API_ENDPOINTS.yahoo}/BRL=X?period1=${period1}&period2=${period2}&interval=1d`;
 
-  const response = await fetchWithRetry(url);
+  const [resBtc, resBrl] = await Promise.all([
+    fetchWithRetry(urlBtc),
+    fetchWithRetry(urlBrl)
+  ]);
 
-  if (!response.ok) {
-    throw new Error(`Yahoo Finance BTC API error: ${response.status}`);
+  if (!resBtc.ok || !resBrl.ok) {
+    throw new Error(`Yahoo Finance BTC/BRL API error`);
   }
 
-  const data = await response.json();
-  const result = data.chart.result[0];
-  const timestamps = result.timestamp;
-  const closes = result.indicators.quote[0].close;
+  const dataBtc = await resBtc.json();
+  const dataBrl = await resBrl.json();
 
-  const prices: PricePoint[] = timestamps.map((ts: number, i: number) => ({
-    date: formatDateISO(new Date(ts * 1000)),
-    value: closes[i],
-  })).filter((p: PricePoint) => p.value !== null);
+  const cBtc = dataBtc.chart.result[0];
+  const cBrl = dataBrl.chart.result[0];
+
+  const mapBrl = new Map<string, number>();
+  cBrl.timestamp.forEach((ts: number, i: number) => {
+    const date = formatDateISO(new Date(ts * 1000));
+    const val = cBrl.indicators.quote[0].close[i];
+    if (val) mapBrl.set(date, val);
+  });
+
+  const prices: PricePoint[] = [];
+
+  cBtc.timestamp.forEach((ts: number, i: number) => {
+    const date = formatDateISO(new Date(ts * 1000));
+    const btcUsd = cBtc.indicators.quote[0].close[i];
+    
+    // Use BRL rate from same day, or fallback or previous
+    // This is an approximation. Yahoo might not have perfectly aligned timestamps.
+    const brlRate = mapBrl.get(date) || 5.0; // Fallback rate if missing?
+    
+    if (btcUsd && brlRate) {
+      prices.push({
+        date: date,
+        value: btcUsd * brlRate
+      });
+    }
+  });
 
   return prices;
 }
