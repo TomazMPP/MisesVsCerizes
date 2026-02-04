@@ -5,12 +5,16 @@ import {
   fetchCDIData,
   fetchIPCAData,
   fetchDolarData,
+  fetchPoupancaData,
+  fetchIFIXData,
 } from '@/lib/api';
 import {
   pricesToPortfolioValues,
   calculateCDIAccumulated,
   calculateIPCAPlus5Accumulated,
   calculateDolarPlus4Accumulated,
+  calculatePoupancaAccumulated,
+  calculateIPCAAccumulated,
   mergeDataForChart,
   calculateReturnPercent,
   calculateAssetStatistics,
@@ -23,13 +27,15 @@ export const revalidate = 3600; // Revalidate every 1 hour
 export async function GET() {
   try {
     // Fetch all data in parallel
-    const [bitcoinPrices, ibovespaPrices, cdiRates, ipcaRates, dolarPrices] =
+    const [bitcoinPrices, ibovespaPrices, cdiRates, ipcaRates, dolarPrices, poupancaRates, ifixPrices] =
       await Promise.all([
         fetchBitcoinData(),
         fetchIbovespaData(),
         fetchCDIData(),
         fetchIPCAData(),
         fetchDolarData(),
+        fetchPoupancaData(),
+        fetchIFIXData(),
       ]);
 
     // Convert prices to portfolio values
@@ -39,7 +45,7 @@ export async function GET() {
     // Calculate benchmark values
     const cdiValues = calculateCDIAccumulated(cdiRates);
 
-    // Get all dates for IPCA calculation
+    // Get all dates for monthly benchmarks calculation
     const allDates = [...new Set([
       ...bitcoinValues.map(p => p.date),
       ...ibovespaValues.map(p => p.date),
@@ -47,6 +53,9 @@ export async function GET() {
 
     const ipcaPlus5Values = calculateIPCAPlus5Accumulated(ipcaRates, allDates);
     const dolarPlus4Values = calculateDolarPlus4Accumulated(dolarPrices);
+    const poupancaValues = calculatePoupancaAccumulated(poupancaRates, allDates);
+    const ipcaValues = calculateIPCAAccumulated(ipcaRates, allDates);
+    const ifixValues = pricesToPortfolioValues(ifixPrices);
 
     // Merge all data for chart
     const chartData = mergeDataForChart(
@@ -54,7 +63,10 @@ export async function GET() {
       ibovespaValues,
       cdiValues,
       ipcaPlus5Values,
-      dolarPlus4Values
+      dolarPlus4Values,
+      poupancaValues,
+      ipcaValues,
+      ifixValues
     );
 
     // Get current values (last data point)
@@ -67,11 +79,17 @@ export async function GET() {
     const cdiStats = calculateAssetStatistics(cdiValues);
     const ipcaPlus5Stats = calculateAssetStatistics(ipcaPlus5Values);
     const dolarPlus4Stats = calculateAssetStatistics(dolarPlus4Values);
+    const poupancaStats = calculateAssetStatistics(poupancaValues);
+    const ipcaStats = calculateAssetStatistics(ipcaValues);
+    const ifixStats = calculateAssetStatistics(ifixValues);
 
     const tableData: AssetTableData[] = [
       { name: 'Bitcoin', color: COLORS.bitcoin, ...bitcoinStats },
       { name: 'Ibovespa', color: COLORS.ibovespa, ...ibovespaStats },
+      { name: 'IFIX', color: COLORS.ifix, ...ifixStats },
       { name: 'CDI', color: COLORS.cdi, ...cdiStats },
+      { name: 'Poupança', color: COLORS.poupanca, ...poupancaStats },
+      { name: 'IPCA', color: COLORS.ipca, ...ipcaStats },
       { name: 'IPCA + 5%', color: COLORS.ipcaPlus5, ...ipcaPlus5Stats },
       { name: 'Dólar + 4%', color: COLORS.dolarPlus4, ...dolarPlus4Stats },
     ];
@@ -97,6 +115,9 @@ export async function GET() {
         cdi: cdiValues,
         ipcaPlus5: ipcaPlus5Values,
         dolarPlus4: dolarPlus4Values,
+        poupanca: poupancaValues,
+        ipca: ipcaValues,
+        ifix: ifixValues,
       },
       chartData,
       tableData,

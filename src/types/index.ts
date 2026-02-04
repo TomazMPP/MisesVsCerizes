@@ -16,6 +16,9 @@ export interface BenchmarkData {
   cdi: PricePoint[];
   ipcaPlus5: PricePoint[];
   dolarPlus4: PricePoint[];
+  poupanca: PricePoint[];
+  ipca: PricePoint[];
+  ifix: PricePoint[];
 }
 
 export interface ChartDataPoint {
@@ -25,6 +28,9 @@ export interface ChartDataPoint {
   cdi?: number;
   ipcaPlus5?: number;
   dolarPlus4?: number;
+  poupanca?: number;
+  ipca?: number;
+  ifix?: number;
 }
 
 export interface PeriodReturns {

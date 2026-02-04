@@ -287,3 +287,101 @@ export async function fetchDolarData(): Promise<PricePoint[]> {
 
   return prices;
 }
+
+// Fetch Poupança data from BCB (monthly rate)
+export async function fetchPoupancaData(): Promise<PricePoint[]> {
+  const startDate = new Date(START_DATE);
+  const endDate = new Date();
+
+  const url = `${API_ENDPOINTS.bcb}.${BCB_SERIES.poupanca}/dados?formato=json&dataInicial=${formatDateBCB(startDate)}&dataFinal=${formatDateBCB(endDate)}`;
+
+  const response = await fetchWithRetry(url);
+
+  if (!response.ok) {
+    throw new Error(`BCB Poupança API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  const prices: PricePoint[] = data.map((item: { data: string; valor: string }) => {
+    const [day, month, year] = item.data.split('/');
+    return {
+      date: `${year}-${month}-${day}`,
+      value: parseFloat(item.valor),
+    };
+  });
+
+  return prices;
+}
+
+// Fetch IFIX data from Yahoo Finance
+export async function fetchIFIXData(): Promise<PricePoint[]> {
+  const startDate = new Date(START_DATE);
+  const endDate = new Date();
+
+  const period1 = Math.floor(startDate.getTime() / 1000);
+  const period2 = Math.floor(endDate.getTime() / 1000);
+
+  // ^IFIX is the IFIX index (same pattern as ^BVSP for Ibovespa)
+  const url = `${API_ENDPOINTS.yahoo}/%5EIFIX?period1=${period1}&period2=${period2}&interval=1d`;
+
+  try {
+    const response = await fetchWithRetry(url);
+
+    if (!response.ok) {
+      console.warn(`Yahoo Finance IFIX API error: ${response.status}, trying fallback ETF...`);
+      return fetchIFIXFromETF();
+    }
+
+    const data = await response.json();
+    const result = data.chart.result[0];
+    const timestamps = result.timestamp;
+    const closes = result.indicators.quote[0].close;
+
+    const prices: PricePoint[] = timestamps.map((ts: number, i: number) => ({
+      date: formatDateISO(new Date(ts * 1000)),
+      value: closes[i],
+    })).filter((p: PricePoint) => p.value !== null);
+
+    return prices;
+  } catch (err) {
+    console.error('Yahoo Finance IFIX failed', err);
+    return fetchIFIXFromETF();
+  }
+}
+
+// Fallback: Fetch IFIX from XFIX11 ETF
+async function fetchIFIXFromETF(): Promise<PricePoint[]> {
+  const startDate = new Date(START_DATE);
+  const endDate = new Date();
+
+  const period1 = Math.floor(startDate.getTime() / 1000);
+  const period2 = Math.floor(endDate.getTime() / 1000);
+
+  // XFIX11.SA is an ETF that tracks IFIX
+  const url = `${API_ENDPOINTS.yahoo}/XFIX11.SA?period1=${period1}&period2=${period2}&interval=1d`;
+
+  const response = await fetchWithRetry(url);
+
+  if (!response.ok) {
+    console.warn(`Yahoo Finance XFIX11 API error: ${response.status}`);
+    return []; // Return empty array as last resort
+  }
+
+  const data = await response.json();
+  const result = data.chart.result?.[0];
+
+  if (!result || !result.timestamp) {
+    return [];
+  }
+
+  const timestamps = result.timestamp;
+  const closes = result.indicators.quote[0].close;
+
+  const prices: PricePoint[] = timestamps.map((ts: number, i: number) => ({
+    date: formatDateISO(new Date(ts * 1000)),
+    value: closes[i],
+  })).filter((p: PricePoint) => p.value !== null);
+
+  return prices;
+}

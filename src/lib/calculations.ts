@@ -261,6 +261,78 @@ export function calculateDolarPlus4Accumulated(
   });
 }
 
+// Calculate Poupança accumulated value (monthly rate applied once per month)
+export function calculatePoupancaAccumulated(
+  poupancaData: PricePoint[],
+  allDates: string[],
+  initialInvestment: number = INITIAL_INVESTMENT
+): PricePoint[] {
+  let accumulated = initialInvestment;
+  const result: PricePoint[] = [];
+
+  // Create a map of month -> Poupança rate
+  const poupancaByMonth: Record<string, number> = {};
+  for (const point of poupancaData) {
+    const monthKey = point.date.substring(0, 7); // YYYY-MM
+    poupancaByMonth[monthKey] = point.value;
+  }
+
+  let lastMonth = '';
+  for (const date of allDates) {
+    const monthKey = date.substring(0, 7);
+
+    // Only apply Poupança rate once per month (on first day of new month data)
+    if (monthKey !== lastMonth && poupancaByMonth[monthKey] !== undefined) {
+      const monthlyRate = poupancaByMonth[monthKey] / 100;
+      accumulated = accumulated * (1 + monthlyRate);
+      lastMonth = monthKey;
+    }
+
+    result.push({
+      date,
+      value: accumulated,
+    });
+  }
+
+  return result;
+}
+
+// Calculate IPCA accumulated value (monthly inflation, no spread)
+export function calculateIPCAAccumulated(
+  ipcaData: PricePoint[],
+  allDates: string[],
+  initialInvestment: number = INITIAL_INVESTMENT
+): PricePoint[] {
+  let accumulated = initialInvestment;
+  const result: PricePoint[] = [];
+
+  // Create a map of month -> IPCA value
+  const ipcaByMonth: Record<string, number> = {};
+  for (const point of ipcaData) {
+    const monthKey = point.date.substring(0, 7); // YYYY-MM
+    ipcaByMonth[monthKey] = point.value;
+  }
+
+  let lastMonth = '';
+  for (const date of allDates) {
+    const monthKey = date.substring(0, 7);
+
+    // Only apply IPCA once per month (on first day of new month data)
+    if (monthKey !== lastMonth && ipcaByMonth[monthKey] !== undefined) {
+      const monthlyIPCA = ipcaByMonth[monthKey] / 100;
+      accumulated = accumulated * (1 + monthlyIPCA);
+      lastMonth = monthKey;
+    }
+
+    result.push({
+      date,
+      value: accumulated,
+    });
+  }
+
+  return result;
+}
+
 // Transform asset prices to portfolio values
 export function pricesToPortfolioValues(
   prices: PricePoint[],
@@ -282,7 +354,10 @@ export function mergeDataForChart(
   ibovespaValues: PricePoint[],
   cdiValues: PricePoint[],
   ipcaPlus5Values: PricePoint[],
-  dolarPlus4Values: PricePoint[]
+  dolarPlus4Values: PricePoint[],
+  poupancaValues: PricePoint[] = [],
+  ipcaValues: PricePoint[] = [],
+  ifixValues: PricePoint[] = []
 ): ChartDataPoint[] {
   // Get all unique dates
   const allDates = new Set<string>();
@@ -291,6 +366,8 @@ export function mergeDataForChart(
   ibovespaValues.forEach((p) => allDates.add(p.date));
   cdiValues.forEach((p) => allDates.add(p.date));
   dolarPlus4Values.forEach((p) => allDates.add(p.date));
+  poupancaValues.forEach((p) => allDates.add(p.date));
+  ifixValues.forEach((p) => allDates.add(p.date));
 
   const sortedDates = Array.from(allDates).sort();
 
@@ -298,30 +375,42 @@ export function mergeDataForChart(
   const btcMap = new Map(bitcoinValues.map((p) => [p.date, p.value]));
   const ibovMap = new Map(ibovespaValues.map((p) => [p.date, p.value]));
   const cdiMap = new Map(cdiValues.map((p) => [p.date, p.value]));
-  const ipcaMap = new Map(ipcaPlus5Values.map((p) => [p.date, p.value]));
+  const ipcaPlus5Map = new Map(ipcaPlus5Values.map((p) => [p.date, p.value]));
   const dolarMap = new Map(dolarPlus4Values.map((p) => [p.date, p.value]));
+  const poupancaMap = new Map(poupancaValues.map((p) => [p.date, p.value]));
+  const ipcaMap = new Map(ipcaValues.map((p) => [p.date, p.value]));
+  const ifixMap = new Map(ifixValues.map((p) => [p.date, p.value]));
 
   // Merge data, using previous value for missing dates
   let lastBtc = INITIAL_INVESTMENT;
   let lastIbov = INITIAL_INVESTMENT;
   let lastCdi = INITIAL_INVESTMENT;
-  let lastIpca = INITIAL_INVESTMENT;
+  let lastIpcaPlus5 = INITIAL_INVESTMENT;
   let lastDolar = INITIAL_INVESTMENT;
+  let lastPoupanca = INITIAL_INVESTMENT;
+  let lastIpca = INITIAL_INVESTMENT;
+  let lastIfix = INITIAL_INVESTMENT;
 
   return sortedDates.map((date) => {
     if (btcMap.has(date)) lastBtc = btcMap.get(date)!;
     if (ibovMap.has(date)) lastIbov = ibovMap.get(date)!;
     if (cdiMap.has(date)) lastCdi = cdiMap.get(date)!;
-    if (ipcaMap.has(date)) lastIpca = ipcaMap.get(date)!;
+    if (ipcaPlus5Map.has(date)) lastIpcaPlus5 = ipcaPlus5Map.get(date)!;
     if (dolarMap.has(date)) lastDolar = dolarMap.get(date)!;
+    if (poupancaMap.has(date)) lastPoupanca = poupancaMap.get(date)!;
+    if (ipcaMap.has(date)) lastIpca = ipcaMap.get(date)!;
+    if (ifixMap.has(date)) lastIfix = ifixMap.get(date)!;
 
     return {
       date,
       bitcoin: Math.round(lastBtc),
       ibovespa: Math.round(lastIbov),
       cdi: Math.round(lastCdi),
-      ipcaPlus5: Math.round(lastIpca),
+      ipcaPlus5: Math.round(lastIpcaPlus5),
       dolarPlus4: Math.round(lastDolar),
+      poupanca: Math.round(lastPoupanca),
+      ipca: Math.round(lastIpca),
+      ifix: Math.round(lastIfix),
     };
   });
 }

@@ -136,6 +136,32 @@ export function BenchmarkChart({ data }: BenchmarkChartProps) {
               strokeDasharray="8 4"
               dot={false}
             />
+            <Line
+              type="monotone"
+              dataKey="poupanca"
+              name="Poupança"
+              stroke="#A78BFA" // Violet-400
+              strokeWidth={1.5}
+              strokeDasharray="2 2"
+              dot={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="ipca"
+              name="IPCA"
+              stroke="#FB923C" // Orange-400
+              strokeWidth={1.5}
+              strokeDasharray="6 2"
+              dot={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="ifix"
+              name="IFIX"
+              stroke="#2DD4BF" // Teal-400
+              strokeWidth={2}
+              dot={false}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>

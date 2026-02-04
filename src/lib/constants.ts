@@ -29,6 +29,9 @@ export const COLORS = {
   cdi: '#444444',
   ipcaPlus5: '#555555',
   dolarPlus4: '#333333',
+  poupanca: '#A78BFA',  // Violet-400
+  ipca: '#FB923C',      // Orange-400
+  ifix: '#2DD4BF',      // Teal-400
 } as const;
 
 // APIs
@@ -44,4 +47,5 @@ export const BCB_SERIES = {
   cdi: 12,      // CDI diário
   ipca: 433,    // IPCA mensal
   dolar: 1,     // Dólar PTAX venda
+  poupanca: 25, // Rendimento mensal da poupança
 } as const;
