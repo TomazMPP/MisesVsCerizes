@@ -153,6 +153,93 @@ export function calculateAssetStatistics(
   return { returns, consistency };
 }
 
+// Calculate statistics for monthly indicators (IPCA, Poupança) based on available months
+// This ensures we only count months with actual data
+export function calculateMonthlyIndicatorStatistics(
+  monthlyRates: PricePoint[], // Raw monthly rates (not accumulated portfolio values)
+  portfolioData: PricePoint[] // Accumulated portfolio values
+): { returns: PeriodReturns; consistency: ConsistencyStats } {
+  if (monthlyRates.length === 0 || portfolioData.length === 0) {
+    return {
+      returns: {
+        currentMonth: 0,
+        yearToDate: 0,
+        last3Months: 0,
+        last6Months: 0,
+        last12Months: 0,
+        last24Months: 0,
+        sinceInception: 0,
+      },
+      consistency: {
+        positiveMonths: 0,
+        negativeMonths: 0,
+        bestMonth: 0,
+        worstMonth: 0,
+      },
+    };
+  }
+
+  // Sort monthly rates by date
+  const sortedRates = [...monthlyRates].sort((a, b) => a.date.localeCompare(b.date));
+  const totalMonths = sortedRates.length;
+
+  // Calculate accumulated returns for last N months of available data
+  const calculateAccumulatedReturn = (numMonths: number): number => {
+    if (totalMonths < numMonths) return calculateAccumulatedReturn(totalMonths);
+
+    const relevantRates = sortedRates.slice(-numMonths);
+    let accumulated = 1;
+    for (const rate of relevantRates) {
+      accumulated *= (1 + rate.value / 100);
+    }
+    return (accumulated - 1) * 100;
+  };
+
+  // Current month: last available month's rate
+  const currentMonthReturn = sortedRates.length > 0
+    ? sortedRates[sortedRates.length - 1].value
+    : 0;
+
+  // Year to date: sum rates from Jan of current year (or available data)
+  const currentYear = new Date().getFullYear().toString();
+  const ytdRates = sortedRates.filter(r => r.date.startsWith(currentYear));
+  let ytdAccumulated = 1;
+  for (const rate of ytdRates) {
+    ytdAccumulated *= (1 + rate.value / 100);
+  }
+  const yearToDateReturn = (ytdAccumulated - 1) * 100;
+
+  // Since inception from portfolio data
+  const sortedPortfolio = [...portfolioData].sort((a, b) => a.date.localeCompare(b.date));
+  const initialValue = sortedPortfolio[0]?.value || INITIAL_INVESTMENT;
+  const currentValue = sortedPortfolio[sortedPortfolio.length - 1]?.value || INITIAL_INVESTMENT;
+  const sinceInceptionReturn = ((currentValue - initialValue) / initialValue) * 100;
+
+  const returns: PeriodReturns = {
+    currentMonth: currentMonthReturn,
+    yearToDate: yearToDateReturn,
+    last3Months: calculateAccumulatedReturn(3),
+    last6Months: calculateAccumulatedReturn(6),
+    last12Months: calculateAccumulatedReturn(12),
+    last24Months: calculateAccumulatedReturn(24),
+    sinceInception: sinceInceptionReturn,
+  };
+
+  // Consistency based on monthly rates
+  const monthlyReturns = sortedRates.map(r => r.value);
+  const positiveMonths = monthlyReturns.filter(r => r > 0).length;
+  const negativeMonths = monthlyReturns.filter(r => r < 0).length;
+
+  const consistency: ConsistencyStats = {
+    positiveMonths,
+    negativeMonths,
+    bestMonth: monthlyReturns.length > 0 ? Math.max(...monthlyReturns) : 0,
+    worstMonth: monthlyReturns.length > 0 ? Math.min(...monthlyReturns) : 0,
+  };
+
+  return { returns, consistency };
+}
+
 // Calculate portfolio value based on price change
 export function calculatePortfolioValue(
   initialPrice: number,

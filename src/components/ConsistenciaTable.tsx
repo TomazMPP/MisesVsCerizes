@@ -27,15 +27,24 @@ export function ConsistenciaTable({ data }: Props) {
               const totalMonths = asset.consistency.positiveMonths + asset.consistency.negativeMonths;
               const posPercent = totalMonths > 0 ? (asset.consistency.positiveMonths / totalMonths) * 100 : 0;
               const negPercent = totalMonths > 0 ? (asset.consistency.negativeMonths / totalMonths) * 100 : 0;
+              const isPrimary = asset.name === 'Bitcoin' || asset.name === 'Ibovespa';
 
               return (
-                <tr key={asset.name} className="hover:bg-[#1A1A1A] transition-colors">
+                <tr
+                  key={asset.name}
+                  className={`transition-colors ${isPrimary ? 'bg-[#0A0A0A]' : 'hover:bg-[#1A1A1A]'}`}
+                >
                   <td className="py-3 px-4 font-medium flex items-center gap-2">
                     <div
-                      className="w-2 h-4 rounded-full"
+                      className={`rounded-full ${isPrimary ? 'w-3 h-5' : 'w-2 h-4'}`}
                       style={{ backgroundColor: asset.color }}
                     />
-                    <span style={{ color: asset.color }}>{asset.name}</span>
+                    <span
+                      className={isPrimary ? 'font-bold' : ''}
+                      style={{ color: asset.color }}
+                    >
+                      {asset.name}
+                    </span>
                   </td>
                   <td className="py-3 px-4 text-center">
                     <div className="flex flex-col">

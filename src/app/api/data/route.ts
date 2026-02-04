@@ -18,6 +18,7 @@ import {
   mergeDataForChart,
   calculateReturnPercent,
   calculateAssetStatistics,
+  calculateMonthlyIndicatorStatistics,
 } from '@/lib/calculations';
 import { INITIAL_INVESTMENT, COLORS } from '@/lib/constants';
 import { ApiResponse, AssetTableData } from '@/types';
@@ -77,11 +78,20 @@ export async function GET() {
     const bitcoinStats = calculateAssetStatistics(bitcoinValues);
     const ibovespaStats = calculateAssetStatistics(ibovespaValues);
     const cdiStats = calculateAssetStatistics(cdiValues);
-    const ipcaPlus5Stats = calculateAssetStatistics(ipcaPlus5Values);
     const dolarPlus4Stats = calculateAssetStatistics(dolarPlus4Values);
-    const poupancaStats = calculateAssetStatistics(poupancaValues);
-    const ipcaStats = calculateAssetStatistics(ipcaValues);
+    const poupancaStats = calculateMonthlyIndicatorStatistics(poupancaRates, poupancaValues);
     const ifixStats = calculateAssetStatistics(ifixValues);
+
+    // Use monthly indicator calculation for IPCA (based on available months of data)
+    const ipcaStats = calculateMonthlyIndicatorStatistics(ipcaRates, ipcaValues);
+
+    // For IPCA+5%, calculate monthly rates with spread (5% a.a. = ~0.407% per month)
+    const monthlySpread = (Math.pow(1.05, 1 / 12) - 1) * 100;
+    const ipcaPlus5Rates = ipcaRates.map(rate => ({
+      date: rate.date,
+      value: rate.value + monthlySpread,
+    }));
+    const ipcaPlus5Stats = calculateMonthlyIndicatorStatistics(ipcaPlus5Rates, ipcaPlus5Values);
 
     const tableData: AssetTableData[] = [
       { name: 'Bitcoin', color: COLORS.bitcoin, ...bitcoinStats },

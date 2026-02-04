@@ -26,14 +26,24 @@ export function RentabilidadeTable({ data }: Props) {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#222222]">
-            {data.map((asset) => (
-              <tr key={asset.name} className="hover:bg-[#1A1A1A] transition-colors">
+            {data.map((asset) => {
+              const isPrimary = asset.name === 'Bitcoin' || asset.name === 'Ibovespa';
+              return (
+              <tr
+                key={asset.name}
+                className={`transition-colors ${isPrimary ? 'bg-[#0A0A0A]' : 'hover:bg-[#1A1A1A]'}`}
+              >
                 <td className="py-3 px-4 font-medium flex items-center gap-2">
                   <div
-                    className="w-2 h-4 rounded-full"
+                    className={`rounded-full ${isPrimary ? 'w-3 h-5' : 'w-2 h-4'}`}
                     style={{ backgroundColor: asset.color }}
                   />
-                  <span style={{ color: asset.color }}>{asset.name}</span>
+                  <span
+                    className={isPrimary ? 'font-bold' : ''}
+                    style={{ color: asset.color }}
+                  >
+                    {asset.name}
+                  </span>
                 </td>
                 <td className={`py-3 px-4 text-right ${asset.returns.currentMonth >= 0 ? 'text-white' : 'text-red-400'}`}>
                    {formatPercent(asset.returns.currentMonth)}
@@ -57,7 +67,7 @@ export function RentabilidadeTable({ data }: Props) {
                    {formatPercent(asset.returns.sinceInception)}
                 </td>
               </tr>
-            ))}
+            );})}
           </tbody>
         </table>
       </div>
