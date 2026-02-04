@@ -86,9 +86,9 @@ export async function GET() {
     const tableData: AssetTableData[] = [
       { name: 'Bitcoin', color: COLORS.bitcoin, ...bitcoinStats },
       { name: 'Ibovespa', color: COLORS.ibovespa, ...ibovespaStats },
-      { name: 'IFIX', color: COLORS.ifix, ...ifixStats },
       { name: 'CDI', color: COLORS.cdi, ...cdiStats },
       { name: 'Poupança', color: COLORS.poupanca, ...poupancaStats },
+      { name: 'IFIX', color: COLORS.ifix, ...ifixStats },
       { name: 'IPCA', color: COLORS.ipca, ...ipcaStats },
       { name: 'IPCA + 5%', color: COLORS.ipcaPlus5, ...ipcaPlus5Stats },
       { name: 'Dólar + 4%', color: COLORS.dolarPlus4, ...dolarPlus4Stats },
