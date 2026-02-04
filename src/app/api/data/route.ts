@@ -18,7 +18,7 @@ import {
 import { INITIAL_INVESTMENT, COLORS } from '@/lib/constants';
 import { ApiResponse, AssetTableData } from '@/types';
 
-export const revalidate = 86400; // Revalidate every 24 hours
+export const revalidate = 3600; // Revalidate every 1 hour
 
 export async function GET() {
   try {
