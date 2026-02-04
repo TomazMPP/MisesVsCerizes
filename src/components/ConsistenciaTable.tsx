@@ -30,12 +30,12 @@ export function ConsistenciaTable({ data }: Props) {
 
               return (
                 <tr key={asset.name} className="hover:bg-[#1A1A1A] transition-colors">
-                  <td className="py-3 px-4 font-medium text-white flex items-center gap-2">
-                    <div 
-                      className="w-1 h-4 rounded-full" 
+                  <td className="py-3 px-4 font-medium flex items-center gap-2">
+                    <div
+                      className="w-2 h-4 rounded-full"
                       style={{ backgroundColor: asset.color }}
                     />
-                    {asset.name}
+                    <span style={{ color: asset.color }}>{asset.name}</span>
                   </td>
                   <td className="py-3 px-4 text-center">
                     <div className="flex flex-col">

@@ -24,14 +24,16 @@ export const COLORS = {
   background: '#000000',
   foreground: '#FFFFFF',
   muted: '#888888',
+  // Principais (destaque)
   bitcoin: '#FFFFFF',
-  ibovespa: '#666666',
-  cdi: '#444444',
-  ipcaPlus5: '#555555',
-  dolarPlus4: '#333333',
-  poupanca: '#A78BFA',  // Violet-400
-  ipca: '#FB923C',      // Orange-400
-  ifix: '#2DD4BF',      // Teal-400
+  ibovespa: '#3B82F6',  // Blue-500 - destaque
+  // Benchmarks secundários (cores mais suaves/escuras)
+  cdi: '#D97706',       // Amber-600
+  poupanca: '#7C3AED',  // Violet-600
+  ifix: '#0F766E',      // Teal-700
+  ipca: '#C2410C',      // Orange-700
+  ipcaPlus5: '#DC2626', // Red-600
+  dolarPlus4: '#059669', // Emerald-600
 } as const;
 
 // APIs

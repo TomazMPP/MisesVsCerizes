@@ -28,12 +28,12 @@ export function RentabilidadeTable({ data }: Props) {
           <tbody className="divide-y divide-[#222222]">
             {data.map((asset) => (
               <tr key={asset.name} className="hover:bg-[#1A1A1A] transition-colors">
-                <td className="py-3 px-4 font-medium text-white flex items-center gap-2">
-                  <div 
-                    className="w-1 h-4 rounded-full" 
+                <td className="py-3 px-4 font-medium flex items-center gap-2">
+                  <div
+                    className="w-2 h-4 rounded-full"
                     style={{ backgroundColor: asset.color }}
                   />
-                  {asset.name}
+                  <span style={{ color: asset.color }}>{asset.name}</span>
                 </td>
                 <td className={`py-3 px-4 text-right ${asset.returns.currentMonth >= 0 ? 'text-white' : 'text-red-400'}`}>
                    {formatPercent(asset.returns.currentMonth)}

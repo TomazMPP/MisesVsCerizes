@@ -31,14 +31,16 @@ interface BenchmarkConfig {
 }
 
 const BENCHMARKS: BenchmarkConfig[] = [
-  { key: 'bitcoin', name: 'Bitcoin', color: '#FFFFFF', strokeWidth: 2, defaultActive: true },
-  { key: 'ibovespa', name: 'Ibovespa', color: '#60A5FA', strokeWidth: 2, defaultActive: true },
-  { key: 'ifix', name: 'IFIX', color: '#2DD4BF', strokeWidth: 2, defaultActive: false },
-  { key: 'cdi', name: 'CDI', color: '#FBBF24', strokeWidth: 1.5, strokeDasharray: '5 5', defaultActive: true },
-  { key: 'poupanca', name: 'Poupança', color: '#A78BFA', strokeWidth: 1.5, strokeDasharray: '2 2', defaultActive: true },
-  { key: 'ipca', name: 'IPCA', color: '#FB923C', strokeWidth: 1.5, strokeDasharray: '6 2', defaultActive: false },
-  { key: 'ipcaPlus5', name: 'IPCA + 5%', color: '#F87171', strokeWidth: 1.5, strokeDasharray: '3 3', defaultActive: false },
-  { key: 'dolarPlus4', name: 'Dólar + 4%', color: '#34D399', strokeWidth: 1.5, strokeDasharray: '8 4', defaultActive: false },
+  // Principais (destaque)
+  { key: 'bitcoin', name: 'Bitcoin', color: '#FFFFFF', strokeWidth: 3, defaultActive: true },
+  { key: 'ibovespa', name: 'Ibovespa', color: '#3B82F6', strokeWidth: 3, defaultActive: true },
+  // Secundários (linhas mais finas, tracejadas)
+  { key: 'cdi', name: 'CDI', color: '#D97706', strokeWidth: 1.5, strokeDasharray: '5 5', defaultActive: true },
+  { key: 'poupanca', name: 'Poupança', color: '#7C3AED', strokeWidth: 1.5, strokeDasharray: '4 4', defaultActive: true },
+  { key: 'ifix', name: 'IFIX', color: '#0F766E', strokeWidth: 1.5, strokeDasharray: '6 3', defaultActive: false },
+  { key: 'ipca', name: 'IPCA', color: '#C2410C', strokeWidth: 1.5, strokeDasharray: '3 3', defaultActive: false },
+  { key: 'ipcaPlus5', name: 'IPCA + 5%', color: '#DC2626', strokeWidth: 1.5, strokeDasharray: '8 4', defaultActive: false },
+  { key: 'dolarPlus4', name: 'Dólar + 4%', color: '#059669', strokeWidth: 1.5, strokeDasharray: '2 2', defaultActive: false },
 ];
 
 function CustomTooltip({ active, payload, label }: any) {
